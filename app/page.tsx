@@ -55,7 +55,7 @@ export default function Home() {
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <h1 style={{ fontSize: 32, marginBottom: 5 }}>
-            <span role="img" aria-label="pin">📍</span> GeoGuessr Europe
+            <span role="img" aria-label="pin">📍</span> GeoMaster Europe
           </h1>
           <p style={{ fontSize: 18, color: "#555" }}>
             Round {round + 1} / {locations.length} - Total Score: {Math.round(score)}
