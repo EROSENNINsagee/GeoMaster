@@ -31,7 +31,6 @@ export default function Home() {
     setGuessMade(true);
     setShowPopup(true);
 
-    // Hide popup after 3 seconds
     setTimeout(() => setShowPopup(false), 3000);
   };
 
@@ -60,14 +59,7 @@ export default function Home() {
           <p style={{ fontSize: 18, color: "#555" }}>
             Round {round + 1} / {locations.length} - Total Score: {Math.round(score)}
           </p>
-          <div
-            style={{
-              height: 10,
-              backgroundColor: "#eee",
-              borderRadius: 5,
-              overflow: "hidden",
-            }}
-          >
+          <div style={{ height: 10, backgroundColor: "#eee", borderRadius: 5, overflow: "hidden" }}>
             <div
               style={{
                 width: `${((round + 1) / locations.length) * 100}%`,
@@ -154,7 +146,7 @@ export default function Home() {
         </div>
 
         {/* Score Popup */}
-        {showPopup && (
+        {showPopup && actual && guess && (
           <div
             style={{
               position: "fixed",
@@ -172,7 +164,7 @@ export default function Home() {
               animation: "fadein 0.5s, fadeout 0.5s 2.5s",
             }}
           >
-            You were <strong>{Math.round(getDistance(actual!, guess!))}</strong> meters away!<br />
+            You were <strong>{Math.round(getDistance(actual, guess))}</strong> meters away!<br />
             You scored <strong>{pointsThisRound}</strong> points.
           </div>
         )}
@@ -209,7 +201,6 @@ function getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: num
 // GeoGuessr-style scoring
 function calculateScore(distance: number) {
   const maxPoints = 5000;
-  const perfectDistance = 10000; // 10 km = perfect score
   const maxDistance = 2000_000; // 2000 km capped
   const minPoints = 50; // minimum score
 
