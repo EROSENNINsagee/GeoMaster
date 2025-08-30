@@ -55,7 +55,7 @@ export default function Home() {
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <h1 style={{ fontSize: 32, marginBottom: 5 }}>
-            <span role="img" aria-label="pin">📍</span> PinPoint Guide Europe
+            <span role="img" aria-label="pin">📍</span> GeoGuessr Europe
           </h1>
           <p style={{ fontSize: 18, color: "#555" }}>
             Round {round + 1} / {locations.length} - Total Score: {Math.round(score)}
@@ -209,8 +209,8 @@ function getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: num
 // GeoGuessr-style scoring
 function calculateScore(distance: number) {
   const maxPoints = 5000;
-  const perfectDistance = 1000; // 1 km = perfect score
-  const maxDistance = 200_000; // 200 km capped
+  const perfectDistance = 10000; // 10 km = perfect score
+  const maxDistance = 2000_000; // 2000 km capped
   const minPoints = 50; // minimum score
 
   const cappedDistance = Math.min(distance, maxDistance);

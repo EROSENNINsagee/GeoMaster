@@ -14,7 +14,7 @@ type Props = {
 
 export default function GuessMap({ actual, guess, setGuess, revealed, round }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<google.maps.Map>();
+  const mapInstance = useRef<google.maps.Map | null>(null); // <- fix here
   const guessMarker = useRef<google.maps.Marker | null>(null);
   const actualMarker = useRef<google.maps.Marker | null>(null);
   const lineRef = useRef<google.maps.Polyline | null>(null);
@@ -23,7 +23,6 @@ export default function GuessMap({ actual, guess, setGuess, revealed, round }: P
   useEffect(() => {
     if (!mapRef.current || !window.google) return;
 
-    // Initialize map once
     if (!mapInstance.current) {
       mapInstance.current = new google.maps.Map(mapRef.current, {
         center: { lat: 0, lng: 0 },
@@ -31,21 +30,19 @@ export default function GuessMap({ actual, guess, setGuess, revealed, round }: P
       });
     }
 
-    // Add click listener once
-    if (!listenerAdded.current) {
+    if (!listenerAdded.current && mapInstance.current) {
       mapInstance.current.addListener("click", (e: google.maps.MapMouseEvent) => {
         if (!e.latLng || revealed) return;
 
         const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
         setGuess(pos);
 
-        // Add/update guess marker
         if (guessMarker.current) {
           guessMarker.current.setPosition(pos);
         } else {
           guessMarker.current = new google.maps.Marker({
             position: pos,
-            map: mapInstance.current,
+            map: mapInstance.current!,
             icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
           });
         }
@@ -53,19 +50,16 @@ export default function GuessMap({ actual, guess, setGuess, revealed, round }: P
       listenerAdded.current = true;
     }
 
-    // Reset map and markers for new round
-    if (!revealed) {
-      if (guessMarker.current) guessMarker.current.setMap(mapInstance.current);
-      if (actualMarker.current) actualMarker.current.setMap(null);
-      if (lineRef.current) lineRef.current.setMap(null);
+    if (!revealed && mapInstance.current) {
+      guessMarker.current?.setMap(mapInstance.current);
+      actualMarker.current?.setMap(null);
+      lineRef.current?.setMap(null);
 
       mapInstance.current.setCenter({ lat: 0, lng: 0 });
       mapInstance.current.setZoom(2);
     }
 
-    // Show actual location and line when revealed
-    if (revealed && actual && guess) {
-      // Actual marker
+    if (revealed && actual && guess && mapInstance.current) {
       if (actualMarker.current) {
         actualMarker.current.setPosition(actual);
         actualMarker.current.setMap(mapInstance.current);
@@ -77,7 +71,6 @@ export default function GuessMap({ actual, guess, setGuess, revealed, round }: P
         });
       }
 
-      // Line from guess to actual
       if (lineRef.current) {
         lineRef.current.setPath([guess, actual]);
         lineRef.current.setMap(mapInstance.current);
@@ -92,7 +85,6 @@ export default function GuessMap({ actual, guess, setGuess, revealed, round }: P
         });
       }
 
-      // Fit map to show both markers
       const bounds = new google.maps.LatLngBounds();
       bounds.extend(new google.maps.LatLng(actual.lat, actual.lng));
       bounds.extend(new google.maps.LatLng(guess.lat, guess.lng));
