@@ -1,9 +1,13 @@
+// app/page.tsx
 "use client";
 
 import React, { useState } from "react";
 import Script from "next/script";
 import dynamic from "next/dynamic";
 import { europeanLocations as locations } from "@/lib/locations";
+import { Orbitron } from "next/font/google";
+
+const orbitron = Orbitron({ subsets: ["latin"], weight: "700" });
 
 const StreetViewPlayer = dynamic(() => import("./components/StreetViewPlayer"), { ssr: false });
 const GuessMap = dynamic(() => import("./components/GuessMap"), { ssr: false });
@@ -17,6 +21,7 @@ export default function Home() {
   const [pointsThisRound, setPointsThisRound] = useState(0);
   const [guessMade, setGuessMade] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
 
   const handleGuess = () => {
     if (!actual || !guess) return;
@@ -35,12 +40,27 @@ export default function Home() {
   };
 
   const nextRound = () => {
-    setRound((r) => (r + 1) % locations.length);
+    if (round + 1 >= locations.length) {
+      setGameOver(true);
+    } else {
+      setRound((r) => r + 1);
+      setActual(null);
+      setGuess(null);
+      setRevealed(false);
+      setPointsThisRound(0);
+      setGuessMade(false);
+    }
+  };
+
+  const restartGame = () => {
+    setRound(0);
     setActual(null);
     setGuess(null);
     setRevealed(false);
+    setScore(0);
     setPointsThisRound(0);
     setGuessMade(false);
+    setGameOver(false);
   };
 
   return (
@@ -50,141 +70,185 @@ export default function Home() {
         strategy="beforeInteractive"
       />
 
-      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto", fontFamily: "sans-serif" }}>
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <h1 style={{ fontSize: 32, marginBottom: 5 }}>
-            <span role="img" aria-label="pin">📍</span> GeoMaster Europe
-          </h1>
-          <p style={{ fontSize: 18, color: "#555" }}>
-            Round {round + 1} / {locations.length} - Total Score: {Math.round(score)}
-          </p>
-          <div style={{ height: 10, backgroundColor: "#eee", borderRadius: 5, overflow: "hidden" }}>
+      {/* Animated gradient background */}
+      <div className="min-h-screen relative overflow-hidden font-sans">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-700 via-blue-600 to-pink-600 animate-gradient-x opacity-95" />
+        <div className="absolute inset-0 backdrop-blur-sm" />
+
+        <div className="relative z-10 text-gray-100 px-6">
+          {/* Header */}
+          <div className="text-center py-8">
+           <h1
+  className="text-6xl font-extrabold drop-shadow-lg"
+  style={{
+    color: "white",
+    textShadow: "0 0 12px rgba(255,255,255,0.9), 0 0 24px rgba(255,255,255,0.8)",
+  }}
+>
+  📍 GeoMaster Europe
+</h1>
+
+
+            <p className="mt-2 text-lg italic text-gray-200">Test your geography skills!</p>
+
+            {!gameOver && (
+              <>
+                <p className="mt-4 text-lg font-semibold">
+                  Round {round + 1} / {locations.length} • Total Score:{" "}
+                  <span className="text-yellow-300 font-bold">{Math.round(score)}</span>
+                </p>
+
+                <div className="w-11/12 md:w-1/2 mx-auto h-3 mt-3 bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                  <div
+                    className="h-full bg-gradient-to-r from-yellow-300 to-orange-500 transition-all duration-500"
+                    style={{ width: `${((round + 1) / locations.length) * 100}%` }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Game / GameOver */}
+          {gameOver ? (
+            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+              <h2 className="text-5xl font-extrabold text-yellow-300 drop-shadow-lg animate-bounce">🎉 Game Over!</h2>
+              <p className="mt-6 text-2xl font-semibold">
+                Final Score: <span className="text-green-400">{Math.round(score)}</span>
+              </p>
+              <button
+                onClick={restartGame}
+                className="mt-10 px-10 py-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold shadow-2xl transform transition hover:scale-110"
+              >
+                🔄 Play Again
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Street View + Map */}
+<div className="flex flex-wrap justify-center gap-6">
+  <div
+    className="flex-1 min-w-[320px] h-[520px] rounded-2xl overflow-hidden border bg-black/40"
+    style={{
+      border: "3px solid rgba(255,255,255,0.85)",
+      boxShadow: "0 0 24px rgba(255,255,255,0.7)",
+      transition: "all 200ms ease",
+    }}
+    onMouseEnter={(e) =>
+      (e.currentTarget.style.boxShadow = "0 0 36px rgba(255,255,255,0.95)")
+    }
+    onMouseLeave={(e) =>
+      (e.currentTarget.style.boxShadow = "0 0 24px rgba(255,255,255,0.7)")
+    }
+  >
+    <StreetViewPlayer locationIndex={round} onFound={setActual} />
+  </div>
+
+  <div
+    className="flex-1 min-w-[320px] h-[520px] rounded-2xl overflow-hidden border bg-black/40"
+    style={{
+      border: "3px solid rgba(255,255,255,0.85)",
+      boxShadow: "0 0 24px rgba(255,255,255,0.7)",
+      transition: "all 200ms ease",
+    }}
+    onMouseEnter={(e) =>
+      (e.currentTarget.style.boxShadow = "0 0 36px rgba(255,255,255,0.95)")
+    }
+    onMouseLeave={(e) =>
+      (e.currentTarget.style.boxShadow = "0 0 24px rgba(255,255,255,0.7)")
+    }
+  >
+    <GuessMap actual={actual} guess={guess} setGuess={setGuess} revealed={revealed} round={round} />
+  </div>
+</div>
+
+
+              {/* Controls */}
+              <div className="mt-10 flex justify-center">
+                {!guessMade ? (
+                  <button
+                    onClick={handleGuess}
+                    className="px-10 py-4 rounded-2xl bg-gradient-to-r from-green-400 to-emerald-600 text-white font-bold shadow-xl transform transition hover:scale-105"
+                  >
+                    🚀 Make Guess
+                  </button>
+                ) : (
+                  <button
+                    onClick={nextRound}
+                    className="px-10 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold shadow-xl transform transition hover:scale-105"
+                  >
+                    ⏭ Next Round
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Score Popup (m / km formatting) */}
+          {showPopup && actual && guess && (
             <div
               style={{
-                width: `${((round + 1) / locations.length) * 100}%`,
-                height: "100%",
-                backgroundColor: "#0070f3",
-                transition: "width 0.3s",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Street View + Map */}
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
-          <div
-            style={{
-              flex: 1,
-              minWidth: 300,
-              height: 500,
-              background: "#000",
-              borderRadius: 12,
-              overflow: "hidden",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-          >
-            <StreetViewPlayer locationIndex={round} onFound={setActual} />
-          </div>
-
-          <div
-            style={{
-              flex: 1,
-              minWidth: 300,
-              height: 500,
-              borderRadius: 12,
-              overflow: "hidden",
-              border: "2px solid #ccc",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-          >
-            <GuessMap actual={actual} guess={guess} setGuess={setGuess} revealed={revealed} round={round} />
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div style={{ marginTop: 30, display: "flex", flexDirection: "column", alignItems: "center", gap: 15 }}>
-          {!guessMade ? (
-            <button
-              onClick={handleGuess}
-              style={{
-                padding: "14px 28px",
+                position: "fixed",
+                top: 20,
+                left: "50%",
+                transform: "translateX(-50%)",
+                backgroundColor: "rgba(255,255,255,0.95)",
+                padding: "16px 28px",
+                borderRadius: 12,
+                boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
+                textAlign: "center",
                 fontSize: 16,
-                borderRadius: 8,
-                backgroundColor: "#0070f3",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-                boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                transition: "0.2s",
+                color: "#111",
+                zIndex: 1000,
+                animation: "fadein 0.5s, fadeout 0.5s 2.5s",
               }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#005bb5")}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#0070f3")}
             >
-              Make Guess
-            </button>
-          ) : (
-            <button
-              onClick={nextRound}
-              style={{
-                padding: "14px 28px",
-                fontSize: 16,
-                borderRadius: 8,
-                backgroundColor: "#28a745",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-                boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                transition: "0.2s",
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#1e7e34")}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#28a745")}
-            >
-              Next Round
-            </button>
+              {(() => {
+                const distanceMeters = getDistance(actual, guess);
+                const distanceKm = distanceMeters / 1000;
+                const distanceLabel =
+                  distanceKm < 1 ? `${Math.round(distanceMeters)} m` : `${distanceKm.toFixed(1)} km`;
+
+                return (
+                  <>
+                    🎯 You were{" "}
+                    <span style={{ fontWeight: 700, color: "#4f46e5" }}>{distanceLabel}</span> away!
+                    <br />
+                    ⭐ You scored{" "}
+                    <span style={{ fontWeight: 700, color: "#059669" }}>{pointsThisRound}</span> points.
+                  </>
+                );
+              })()}
+            </div>
           )}
         </div>
-
-        {/* Score Popup */}
-        {showPopup && actual && guess && (
-          <div
-            style={{
-              position: "fixed",
-              top: 20,
-              left: "50%",
-              transform: "translateX(-50%)",
-              backgroundColor: "#fff",
-              padding: "16px 28px",
-              borderRadius: 12,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-              textAlign: "center",
-              fontSize: 16,
-              color: "#333",
-              zIndex: 1000,
-              animation: "fadein 0.5s, fadeout 0.5s 2.5s",
-            }}
-          >
-            You were <strong>{Math.round(getDistance(actual, guess))}</strong> meters away!<br />
-            You scored <strong>{pointsThisRound}</strong> points.
-          </div>
-        )}
-
-        <style jsx>{`
-          @keyframes fadein {
-            from { opacity: 0; transform: translateY(-10px);}
-            to { opacity: 1; transform: translateY(0);}
-          }
-          @keyframes fadeout {
-            from { opacity: 1; transform: translateY(0);}
-            to { opacity: 0; transform: translateY(-10px);}
-          }
-        `}</style>
       </div>
+
+      {/* Animations & helper keyframes */}
+      <style jsx global>{`
+        .animate-gradient-x {
+          background-size: 400% 400%;
+          animation: gradient-x 18s linear infinite;
+        }
+        @keyframes gradient-x {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        @keyframes fadein {
+          from { opacity: 0; transform: translateY(-12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeout {
+          from { opacity: 1; transform: translateY(0); }
+          to { opacity: 0; transform: translateY(-12px); }
+        }
+      `}</style>
     </>
   );
 }
 
-// Haversine distance formula
+// Haversine distance formula (meters)
 function getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371000; // meters
   const φ1 = (a.lat * Math.PI) / 180;
@@ -201,8 +265,8 @@ function getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: num
 // GeoGuessr-style scoring
 function calculateScore(distance: number) {
   const maxPoints = 5000;
-  const maxDistance = 2000_000; // 2000 km capped
-  const minPoints = 50; // minimum score
+  const maxDistance = 2000_000;
+  const minPoints = 50;
 
   const cappedDistance = Math.min(distance, maxDistance);
   const score = maxPoints * Math.pow((maxDistance - cappedDistance) / maxDistance, 2);

@@ -1,3 +1,4 @@
+// app/components/GuessMap.tsx
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -12,7 +13,13 @@ type Props = {
   round: number;
 };
 
-export default function GuessMap({ actual, guess, setGuess, revealed, round }: Props) {
+export default function GuessMap({
+  actual,
+  guess,
+  setGuess,
+  revealed,
+  round,
+}: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const guessMarker = useRef<google.maps.Marker | null>(null);
