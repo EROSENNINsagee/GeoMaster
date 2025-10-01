@@ -64,10 +64,10 @@ export default function StreetViewPlayer(props: {
       if (panoramaRef.current) {
         try {
           panoramaRef.current.setVisible(false);
-          // @ts-ignore cleanup
+          // "@ts-expect-error"
           panoramaRef.current = null;
         } catch {
-          // ignore
+          // error
         }
       }
     };
