@@ -1,101 +1,77 @@
-// components/StreetViewPlayer.tsx
+// app/components/StreetViewPlayer.tsx
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { europeanLocations as locations } from "@/lib/locations";
 
-type LatLng = { lat: number; lng: number };
+type Loc = { lat: number; lng: number; country?: string; city?: string };
 
-type Props = {
-  locationIndex: number;
-  onFound: (loc: LatLng) => void;
-};
-
-export default function StreetViewPlayer({ locationIndex, onFound }: Props) {
+export default function StreetViewPlayer(props: {
+  location?: Loc;
+  onFound: (latlng: { lat: number; lng: number }) => void;
+}) {
+  const { location, onFound } = props;
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const foundRef = useRef(false);
+  const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
 
   useEffect(() => {
-    const location = locations[locationIndex];
     if (!location) return;
 
-    // Reset previous panorama
-    foundRef.current = false;
     let cancelled = false;
-    if (containerRef.current) {
-      containerRef.current.innerHTML = "";
-    }
 
-    const tryStreetView = () => {
-      if (!window.google || !window.google.maps) return;
+    // Try-to-init loop: wait for google to exist (Script might still be loading)
+    const tryInit = () => {
+      if (cancelled) return;
+      const g = (window as any).google;
+      if (!g || !containerRef.current) {
+        // try again shortly
+        setTimeout(tryInit, 200);
+        return;
+      }
 
-      const svc = new google.maps.StreetViewService();
+      const sv = new g.maps.StreetViewService();
+      const latLng = new g.maps.LatLng(location.lat, location.lng);
 
-      // Smaller radius first, then fallback to larger if needed
-      const searchRadius = [500, 5000, 50000];
+      sv.getPanorama({ location: latLng, radius: 50000 }, (data: any, status: string) => {
+        if (cancelled) return;
+        if (status === "OK" && data?.location?.latLng) {
+          // create panorama inside container
+          panoramaRef.current = new g.maps.StreetViewPanorama(containerRef.current, {
+            position: data.location.latLng,
+            pov: { heading: 34, pitch: 10 },
+            zoom: 1,
+          });
 
-      const tryRadius = (i: number) => {
-        if (i >= searchRadius.length) {
-          // Total failure → static fallback
-          const img = new Image();
-          img.src = `https://maps.googleapis.com/maps/api/streetview?size=1200x800&location=${location.lat},${location.lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-          img.style.width = "100%";
-          img.style.height = "100%";
-          img.style.objectFit = "cover";
-
-          img.onload = () => {
-            if (!foundRef.current && !cancelled) {
-              const container = containerRef.current!;
-              if (!container) return;
-              container.innerHTML = "";
-              container.appendChild(img);
-              foundRef.current = true;
-              // Fallback still reports raw location
-              onFound(location);
-            }
-          };
-          return;
-        }
-
-        svc.getPanorama({ location, radius: searchRadius[i] }, (data, status) => {
-          if (cancelled || foundRef.current) return;
-          const container = containerRef.current!;
-          if (!container) return;
-
-          if (status === "OK" && data?.location?.latLng) {
-            container.innerHTML = "";
-            new google.maps.StreetViewPanorama(container, {
-              position: data.location.latLng,
-              pov: { heading: 100, pitch: 0 },
-              visible: true,
-            });
-
-            if (!foundRef.current) {
-              foundRef.current = true;
-              // ✅ Use actual panorama coords, not raw location
-              onFound(data.location.latLng.toJSON());
-            }
-          } else {
-            // Try next radius
-            tryRadius(i + 1);
+          // Notify parent of the real panorama location
+          const p = data.location.latLng;
+          onFound({ lat: p.lat(), lng: p.lng() });
+        } else {
+          // fallback: show a static Street View image and notify parent with requested coords
+          const lat = location.lat;
+          const lng = location.lng;
+          const staticUrl = `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+          if (containerRef.current) {
+            containerRef.current.innerHTML = `<img src="${staticUrl}" style="width:100%;height:100%;object-fit:cover;" />`;
           }
-        });
-      };
-
-      tryRadius(0);
+          onFound({ lat: location.lat, lng: location.lng });
+        }
+      });
     };
 
-    tryStreetView();
+    tryInit();
 
     return () => {
       cancelled = true;
+      if (panoramaRef.current) {
+        try {
+          panoramaRef.current.setVisible(false);
+          // @ts-ignore cleanup
+          panoramaRef.current = null;
+        } catch {
+          // ignore
+        }
+      }
     };
-  }, [locationIndex, onFound]);
+  }, [location, onFound]);
 
-  return (
-    <div
-      ref={containerRef}
-      style={{ width: "100%", height: "100%", background: "#000" }}
-    />
-  );
+  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }
