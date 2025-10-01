@@ -5,10 +5,12 @@ import React, { useState, useMemo } from "react";
 import Script from "next/script";
 import dynamic from "next/dynamic";
 import { europeanLocations as locations } from "@/lib/locations";
-import { Orbitron } from "next/font/google";
 
+// keep font import but remove unused variable warnings
+import { Orbitron } from "next/font/google";
 const orbitron = Orbitron({ subsets: ["latin"], weight: "700" });
 
+// dynamic imports (no SSR)
 const StreetViewPlayer = dynamic(() => import("./components/StreetViewPlayer"), { ssr: false });
 const GuessMap = dynamic(() => import("./components/GuessMap"), { ssr: false });
 
@@ -22,7 +24,6 @@ function shuffleArray<T>(arr: T[]) {
 }
 
 export default function Home() {
-  // seed changes on page reload -> re-run shuffle once per reload
   const [seed] = useState(() => Math.random());
   const shuffledLocations = useMemo(() => shuffleArray(locations), [seed]);
 
@@ -68,8 +69,6 @@ export default function Home() {
   };
 
   const restartGame = () => {
-    // keep simple: reset state and also re-seed on reload by reloading page
-    // you can change this to reshuffle programmatically if you prefer not to reload
     window.location.reload();
   };
 
@@ -141,7 +140,6 @@ export default function Home() {
                     transition: "all 200ms ease",
                   }}
                 >
-                  {/* render StreetViewPlayer only if currentLocation exists */}
                   {currentLocation && (
                     <StreetViewPlayer location={currentLocation} onFound={setActual} />
                   )}
@@ -155,7 +153,13 @@ export default function Home() {
                     transition: "all 200ms ease",
                   }}
                 >
-                  <GuessMap actual={actual} guess={guess} setGuess={setGuess} revealed={revealed} round={round} />
+                  <GuessMap
+                    actual={actual}
+                    guess={guess}
+                    setGuess={setGuess}
+                    revealed={revealed}
+                    round={round}
+                  />
                 </div>
               </div>
 
@@ -200,13 +204,24 @@ export default function Home() {
               {(() => {
                 const distanceMeters = getDistance(actual, guess);
                 const distanceKm = distanceMeters / 1000;
-                const distanceLabel = distanceKm < 1 ? `${Math.round(distanceMeters)} m` : `${distanceKm.toFixed(1)} km`;
+                const distanceLabel =
+                  distanceKm < 1
+                    ? `${Math.round(distanceMeters)} m`
+                    : `${distanceKm.toFixed(1)} km`;
 
                 return (
                   <>
-                    🎯 You were <span style={{ fontWeight: 700, color: "#4f46e5" }}>{distanceLabel}</span> away!
+                    🎯 You were{" "}
+                    <span style={{ fontWeight: 700, color: "#4f46e5" }}>
+                      {distanceLabel}
+                    </span>{" "}
+                    away!
                     <br />
-                    ⭐ You scored <span style={{ fontWeight: 700, color: "#059669" }}>{pointsThisRound}</span> points.
+                    ⭐ You scored{" "}
+                    <span style={{ fontWeight: 700, color: "#059669" }}>
+                      {pointsThisRound}
+                    </span>{" "}
+                    points.
                   </>
                 );
               })()}
@@ -221,18 +236,42 @@ export default function Home() {
           animation: gradient-x 18s linear infinite;
         }
         @keyframes gradient-x {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
         }
-        @keyframes fadein { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeout { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-12px); } }
+        @keyframes fadein {
+          from {
+            opacity: 0;
+            transform: translateY(-12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes fadeout {
+          from {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateY(-12px);
+          }
+        }
       `}</style>
     </>
   );
 }
 
-// distance & scoring functions (unchanged)
+// helper functions
 function getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371000;
   const φ1 = (a.lat * Math.PI) / 180;
@@ -240,7 +279,9 @@ function getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: num
   const Δφ = ((b.lat - a.lat) * Math.PI) / 180;
   const Δλ = ((b.lng - a.lng) * Math.PI) / 180;
 
-  const x = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  const x =
+    Math.sin(Δφ / 2) ** 2 +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 
   return R * c;
@@ -248,11 +289,12 @@ function getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: num
 
 function calculateScore(distance: number) {
   const maxPoints = 5000;
-  const maxDistance = 2000_000;
+  const maxDistance = 2000000;
   const minPoints = 50;
 
   const cappedDistance = Math.min(distance, maxDistance);
-  const score = maxPoints * Math.pow((maxDistance - cappedDistance) / maxDistance, 2);
+  const score =
+    maxPoints * Math.pow((maxDistance - cappedDistance) / maxDistance, 2);
 
   return Math.round(Math.max(score, minPoints));
 }
